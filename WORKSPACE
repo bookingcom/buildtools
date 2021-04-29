@@ -3,6 +3,12 @@ workspace(name = "com_github_bazelbuild_buildtools")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
+    name = "rules_python",
+    sha256 = "778197e26c5fbeb07ac2a2c5ae405b30f6cb7ad1f5510ea6fdac03bded96cc6f",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.2.0/rules_python-0.2.0.tar.gz",
+)
+
+http_archive(
     name = "io_bazel_rules_go",
     sha256 = "d1ffd055969c8f8d431e2d439813e42326961d0942bdf734d2c95dc30c369566",
     urls = [
@@ -84,4 +90,13 @@ npm_install(
     name = "buildozer_npm_deps",
     package_json = "//buildozer/npm:package.json",
     package_lock_json = "//buildozer/npm:package-lock.json",
+)
+
+load("@rules_python//python:pip.bzl", "pip_install")
+
+# Create a central repo that knows about the dependencies needed for
+# requirements.txt.
+pip_install(
+    name = "unused_deps_py_pip",
+    requirements = "//:unused_deps_py/requirements.txt",
 )

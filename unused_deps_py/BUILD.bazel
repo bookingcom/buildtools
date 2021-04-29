@@ -1,0 +1,30 @@
+load("@unused_deps_py_pip//:requirements.bzl", "requirement")
+
+py_library(
+    name = "unused_deps_py_lib",
+    srcs = [
+        "unused_deps/__init__.py",
+        "unused_deps/aspect.py",
+        "unused_deps/command.py",
+        "unused_deps/maven.py",
+        "unused_deps/processor.py",
+        "unused_deps/workspace.py",
+    ],
+    data = [
+        "unused_deps/javac_params.bzl",
+    ],
+    imports = ["."],
+    srcs_version = "PY3",
+    deps = [
+        "//deps_proto:python_default_library",
+        requirement("java-manifest"),
+    ],
+)
+
+py_binary(
+    name = "unused_deps_py",
+    srcs = ["main.py"],
+    main = "main.py",
+    python_version = "PY3",
+    deps = [":unused_deps_py_lib"],
+)
