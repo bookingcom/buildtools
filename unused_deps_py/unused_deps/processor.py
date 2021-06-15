@@ -108,6 +108,8 @@ class Processor:
                 jars_by_deps.pop(used_dep)
         logging.info(f'resolved {len(jars_by_deps.keys())} dependencies that can be removed from {target}')
         unused_deps = invert_dict(jars_by_deps)
+        if None in unused_deps:
+            unused_deps.pop(None)
         labels = sorted(unused_deps.keys())
         for label in labels:
             print(f"buildozer 'remove deps {label}' {target}")
@@ -148,13 +150,21 @@ class Processor:
         for line in pending.splitlines():
             if '--' in line:
                 break
+            filename = os.path.basename(line)
+            if filename.startswith('header_'):
+                line = line.replace(filename, filename[len('header_'):])
             generated_jar_path = get_real_path(os.path.join(self.bazel_output_path,strip_prefix_path(line, 'bazel-out')),'/bazel-out')
             label = self.get_target_from_path(generated_jar_path, line)
             out[label] = line
         return out
 
     def get_target_from_path(self, filename: str, original_name:str) -> str:
-        manifest = java_manifest.from_jar(filename)[0]
+        manifest = None
+        try:
+            manifest = java_manifest.from_jar(filename)[0]
+        except:
+            logging.error(f'Failed to get manifest from {filename}')
+            return None
         label = manifest.get('Target-Label', None)
         if label:
             # this is a bazel generated rule
