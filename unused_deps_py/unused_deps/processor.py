@@ -108,8 +108,7 @@ class Processor:
                 jars_by_deps.pop(used_dep)
         logging.info(f'resolved {len(jars_by_deps.keys())} dependencies that can be removed from {target}')
         unused_deps = invert_dict(jars_by_deps)
-        if None in unused_deps:
-            unused_deps.pop(None)
+        unused_deps.pop(None, None)
         labels = sorted(unused_deps.keys())
         for label in labels:
             print(f"buildozer 'remove deps {label}' {target}")
@@ -150,21 +149,18 @@ class Processor:
         for line in pending.splitlines():
             if '--' in line:
                 break
-            filename = os.path.basename(line)
-            if filename.startswith('header_'):
-                line = line.replace(filename, filename[len('header_'):])
             generated_jar_path = get_real_path(os.path.join(self.bazel_output_path,strip_prefix_path(line, 'bazel-out')),'/bazel-out')
             label = self.get_target_from_path(generated_jar_path, line)
             out[label] = line
         return out
 
+    def remove_header_from_jar(self, filename: str) -> str:
+        dirname = os.path.dirname(filename)
+        basename = os.path.basename(filename)
+        return os.path.join(dirname, basename.replace('header_', ''))
+
     def get_target_from_path(self, filename: str, original_name:str) -> str:
-        manifest = None
-        try:
-            manifest = java_manifest.from_jar(filename)[0]
-        except:
-            logging.error(f'Failed to get manifest from {filename}')
-            return None
+        manifest = java_manifest.from_jar(filename)[0]
         label = manifest.get('Target-Label', None)
         if label:
             # this is a bazel generated rule
@@ -179,6 +175,9 @@ class Processor:
         candidate = 'external' + original_name.split('external', 1)[1]
         if candidate in self.jars_to_maven:
             return self.jars_to_maven[candidate]
+        if os.path.basename(filename).startswith('header_'):
+            return self.get_target_from_path(self.remove_header_from_jar(filename),
+                self.remove_header_from_jar(original_name))
         logging.error(f"Couldn't resolve {filename} {original_name}")
 
     def get_maven_repos(self) -> List[str]:
