@@ -68,11 +68,11 @@ py_wheel(
     strip_path_prefixes = [
       'python',
     ],
-    homepage = "https://github.com/bookingcom/buildtools.git",
+    homepage = "https://github.com/bookingcom/buildtools/tree/master/unused_deps_py",
     license = "Apache 2.0",
     python_tag = "py3",
     python_requires = '>=3',
-    version = "0.0.3",
+    version = "0.0.4",
     deps = [
       ":unused_deps_py_pkg",
     ],
