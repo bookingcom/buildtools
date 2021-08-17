@@ -3,7 +3,10 @@
 import argparse
 import logging
 import sys
-from unused_deps import processor
+try:
+    from .unused_deps import processor
+except ImportError:
+    from unused_deps import processor
 
 
 BAZEL_FLAGS = ["--tool_tag=unused_deps", "--keep_going", "--color=yes", "--curses=yes"]
