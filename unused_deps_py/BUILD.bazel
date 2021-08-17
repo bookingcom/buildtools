@@ -1,4 +1,6 @@
 load("@unused_deps_py_pip//:requirements.bzl", "requirement")
+load("@rules_python//python:defs.bzl", "py_library", "py_binary")
+load("@rules_python//python:packaging.bzl", "py_package", "py_wheel")
 
 py_library(
     name = "unused_deps_py_lib",
@@ -21,10 +23,60 @@ py_library(
     ],
 )
 
+py_library(
+  name = "unused_deps_py_main",
+  srcs = [
+    ":main.py"
+  ],
+  imports = ["."],
+  srcs_version = "PY3"
+)
+
 py_binary(
     name = "unused_deps_py",
     srcs = ["main.py"],
     main = "main.py",
     python_version = "PY3",
     deps = [":unused_deps_py_lib"],
+)
+
+py_package(
+    name = "unused_deps_py_pkg",
+    deps = [
+      ":unused_deps_py_lib",
+      ":unused_deps_py_main",
+      "//deps_proto:python_default_library",
+      requirement("java-manifest"),
+    ],
+)
+
+py_wheel(
+    name = "unused_deps_py_wheel",
+    author = "Command line tool to detect unused java dependencies with support for rules_jvm_external definitions",
+    author_email = "manuel.naranjo@booking.com",
+    classifiers = [
+        "License :: OSI Approved :: Apache Software License",
+        "Intended Audience :: Developers",
+        "Development Status :: 4 - Beta",
+        "Environment :: Console",
+        "Topic :: Software Development :: Build Tools",
+    ],
+    description_file = "README.md",
+    # Package data. We're building "example_customized-0.0.1-py3-none-any.whl"
+    distribution = "unused_deps_py",
+    entry_points = {
+        "console_scripts": ["unused_deps_py = unused_deps_py.main:main"],
+    },
+    strip_path_prefixes = [
+      #'unused_deps_py',
+      'pypi__',
+      'python',
+    ],
+    homepage = "https://www.booking.com",
+    license = "Apache 2.0",
+    python_tag = "py3",
+    version = "0.0.1",
+    deps = [
+      ":unused_deps_py_pkg",
+    ],
 )
