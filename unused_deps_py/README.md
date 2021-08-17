@@ -8,12 +8,15 @@ maven repositories.
 
 ## Installation
 
-Build a binary and put it into your $PATH:
+### Preferred way
+```shell
+$ pip install unused-deps-py
+$ unused_deps_py --help
+```
 
-```bash
-bazel build //unused_deps_py
-mkdir -p ~/bin
-ln -s $(pwd)/bazel-bin/unused_deps_py/unused_deps_py ~/bin/unused_deps_py
+### Building from sources
+```shell
+$ bazel run //unused_deps_py --help
 ```
 
 ## Usage
@@ -24,12 +27,12 @@ unused_deps_py TARGET...
 
 Here, `TARGET` is a space-separated list of Bazel labels, with support for `:all` and `...`
 
-## Releasing
+## Releasing to PyPI
 
-In order to release a new version you need to run this commands:
+In order to release a new version you first need to edit BUILD.bazel to bump the
+version number, then you need to run:
 
 ```shell
-bazel build --build_python_zip //unused_deps_py
+$ bazel build //unused_deps_py:unused_deps_py_wheel
+$ twine upload bazel-bin/unused_deps_py/unused_deps_py-<version>-py3-none-any.whl
 ```
-
-And then upload `bazel-bin/unused_deps_py/unused_deps_py.zip` to GitHub

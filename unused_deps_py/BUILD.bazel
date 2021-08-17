@@ -46,7 +46,6 @@ py_package(
       ":unused_deps_py_lib",
       ":unused_deps_py_main",
       "//deps_proto:python_default_library",
-      requirement("java-manifest"),
     ],
 )
 
@@ -62,21 +61,22 @@ py_wheel(
         "Topic :: Software Development :: Build Tools",
     ],
     description_file = "README.md",
-    # Package data. We're building "example_customized-0.0.1-py3-none-any.whl"
     distribution = "unused_deps_py",
     entry_points = {
         "console_scripts": ["unused_deps_py = unused_deps_py.main:main"],
     },
     strip_path_prefixes = [
-      #'unused_deps_py',
-      'pypi__',
       'python',
     ],
     homepage = "https://www.booking.com",
     license = "Apache 2.0",
     python_tag = "py3",
-    version = "0.0.1",
+    python_requires = '>=3',
+    version = "0.0.2",
     deps = [
       ":unused_deps_py_pkg",
     ],
+    requires = [
+      'java-manifest>=1.1.0'
+    ]
 )
