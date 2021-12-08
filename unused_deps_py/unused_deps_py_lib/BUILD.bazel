@@ -1,0 +1,16 @@
+load("@unused_deps_py_pip//:requirements.bzl", "requirement")
+load("@rules_python//python:defs.bzl", "py_library")
+
+py_library(
+    name = "unused_deps_py_lib",
+    srcs = glob(["*.py"]),
+    data = [
+        "javac_params.bzl",
+    ],
+    srcs_version = "PY3",
+    deps = [
+        "//deps_proto:python_default_library",
+        requirement("java-manifest"),
+    ],
+    visibility = ["//visibility:public"],
+)

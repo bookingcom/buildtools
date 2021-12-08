@@ -41,3 +41,31 @@ Then you need to run:
 $ bazel build //unused_deps_py:unused_deps_py_wheel
 $ twine upload bazel-bin/unused_deps_py/unused_deps_py-<version>-py3-none-any.whl
 ```
+
+## Local manual testing
+
+```shell
+# build
+bazel build //unused_deps_py/...
+# store the filename of the Python Wheel in a variable
+WHL="$(ls $(bazel info bazel-bin)/unused_deps_py/*.whl)"
+# move to a temporary directory
+pushd /tmp
+# setup a virtual environment to avoid polluting your Python installation
+pipenv install
+# install the wheel
+pipenv install $WHL
+# enter the pipenv environment to do manual testing
+pipenv shell
+# do some manual tests
+unused_deps_py -h
+unused_deps_py --version
+unused_deps_py --workspace-path /whatever //libs/super-lib
+# exit the virtual environment
+exit
+# delete the virtual environment
+pipenv --rm
+rm Pipfile && rm Pipfile.lock
+# go back to your previous directory
+popd
+```

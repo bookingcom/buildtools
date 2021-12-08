@@ -1,34 +1,11 @@
-load("@unused_deps_py_pip//:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "py_library", "py_binary")
 load("@rules_python//python:packaging.bzl", "py_package", "py_wheel")
-
-py_library(
-    name = "unused_deps_py_lib",
-    srcs = [
-        "unused_deps/__init__.py",
-        "unused_deps/aspect.py",
-        "unused_deps/command.py",
-        "unused_deps/maven.py",
-        "unused_deps/processor.py",
-        "unused_deps/workspace.py",
-    ],
-    data = [
-        "unused_deps/javac_params.bzl",
-    ],
-    imports = ["."],
-    srcs_version = "PY3",
-    deps = [
-        "//deps_proto:python_default_library",
-        requirement("java-manifest"),
-    ],
-)
 
 py_library(
   name = "unused_deps_py_main",
   srcs = [
     ":main.py"
   ],
-  imports = ["."],
   srcs_version = "PY3"
 )
 
@@ -37,13 +14,13 @@ py_binary(
     srcs = ["main.py"],
     main = "main.py",
     python_version = "PY3",
-    deps = [":unused_deps_py_lib"],
+    deps = ["//unused_deps_py/unused_deps_py_lib"],
 )
 
 py_package(
     name = "unused_deps_py_pkg",
     deps = [
-      ":unused_deps_py_lib",
+      "//unused_deps_py/unused_deps_py_lib",
       ":unused_deps_py_main",
       "//deps_proto:python_default_library",
     ],
