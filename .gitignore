@@ -3,3 +3,4 @@
 .idea
 .ijwb
 *.iml
+__pycache__/
