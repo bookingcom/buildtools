@@ -1,9 +1,10 @@
 load("@unused_deps_py_pip//:requirements.bzl", "requirement")
-load("@rules_python//python:defs.bzl", "py_library")
+load("@unused_deps_py_pip_dev//:requirements.bzl", dev_requirement = "requirement")
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
 
 py_library(
     name = "unused_deps_py_lib",
-    srcs = glob(["*.py"]),
+    srcs = glob(["*.py"], exclude = ["*_test.py"]),
     data = [
         "javac_params.bzl",
     ],
@@ -13,4 +14,14 @@ py_library(
         requirement("java-manifest"),
     ],
     visibility = ["//visibility:public"],
+)
+
+py_test(
+    name = "string_util_test",
+    srcs = glob(["*.py"]),
+    main = "string_util_test.py",
+    deps = [
+        dev_requirement("pytest")
+    ],
+    imports = ['.'],
 )

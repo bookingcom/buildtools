@@ -102,3 +102,9 @@ pip_install(
     name = "unused_deps_py_pip",
     requirements = "//:unused_deps_py/requirements.txt",
 )
+
+# Same, but for dev dependencies
+pip_install(
+    name = "unused_deps_py_pip_dev",
+    requirements = "//:unused_deps_py/requirements_dev.txt",
+)
