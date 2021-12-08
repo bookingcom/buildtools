@@ -54,6 +54,7 @@ py_wheel(
       ":unused_deps_py_pkg",
     ],
     requires = [
-      'java-manifest>=1.1.0'
+      'java-manifest>=1.1.0',
+      'six>=1.16.0'
     ]
 )
