@@ -3,10 +3,7 @@
 import argparse
 import logging
 import sys
-try:
-    from .unused_deps import processor
-except ImportError:
-    from unused_deps import processor
+from .unused_deps_py_lib.processor import Processor
 
 
 BAZEL_FLAGS = ["--tool_tag=unused_deps", "--keep_going", "--color=yes", "--curses=yes"]
@@ -20,7 +17,7 @@ def main():
         format="%(asctime)s %(levelname)s %(message)s",
         level=getattr(logging, log_level)
     )
-    instance = processor.Processor(**args)
+    instance = Processor(**args)
     instance.process()
 
 
