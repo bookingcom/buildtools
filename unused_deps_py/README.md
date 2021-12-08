@@ -30,8 +30,12 @@ Here, `TARGET` is a space-separated list of Bazel labels, with support for `:all
 
 ## Releasing to PyPI
 
-In order to release a new version you first need to edit BUILD.bazel to bump the
-version number, then you need to run:
+In order to release a new version you first need update the version number in:
+
+1. `BUILD.bazel`
+2. `main.py`
+
+Then you need to run:
 
 ```shell
 $ bazel build //unused_deps_py:unused_deps_py_wheel
