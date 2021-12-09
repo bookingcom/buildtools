@@ -27,7 +27,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -342,6 +341,8 @@ func cmdPrint(opts *Options, env CmdEnvironment) (*build.File, error) {
 			fields[i] = &apipb.Output_Record_Field{Value: &apipb.Output_Record_Field_Number{int32(env.Rule.Call.ListStart.Line)}}
 		} else if str == "endline" {
 			fields[i] = &apipb.Output_Record_Field{Value: &apipb.Output_Record_Field_Number{int32(env.Rule.Call.End.Pos.Line)}}
+		} else if str == "path" {
+			fields[i] = &apipb.Output_Record_Field{Value: &apipb.Output_Record_Field_Text{env.File.Path}}
 		} else if value == nil {
 			fmt.Fprintf(opts.ErrWriter, "rule \"//%s:%s\" has no attribute \"%s\"\n",
 				env.Pkg, env.Rule.Name(), str)
@@ -814,9 +815,13 @@ func SplitOnSpaces(input string) []string {
 //   whitespace
 // - a target all commands that are parsed during one call to parseCommands
 //   should be applied on
-func parseCommands(opts *Options, args []string) (commands []command, targets []string) {
+func parseCommands(opts *Options, args []string) (commands []command, targets []string, err error) {
 	for _, arg := range args {
 		commandTokens := SplitOnSpaces(arg)
+		if len(commandTokens) == 0 {
+			return nil, nil, fmt.Errorf("empty command list")
+		}
+
 		cmd, found := AllCommands[commandTokens[0]]
 		if found {
 			checkCommandUsage(opts, commandTokens[0], cmd, len(commandTokens)-1)
@@ -879,6 +884,27 @@ func getGlobalVariables(exprs []build.Expr) (vars map[string]*build.AssignExpr) 
 // BuildFileNames is exported so that users that want to override it
 // in scripts are free to do so.
 var BuildFileNames = [...]string{"BUILD.bazel", "BUILD", "BUCK"}
+
+// Buildifier formats the build file using the buildifier logic.
+type Buildifier interface {
+	// Buildify formats the build file and returns the formatted contents.
+	Buildify(*Options, *build.File) ([]byte, error)
+}
+
+var buildifier Buildifier = &defaultBuildifier{}
+var buildifierRegistered = false
+
+// RegisterBuildifier replaces the default buildifier with an
+// alternative implementation.
+//
+// It may only be called once.
+func RegisterBuildifier(b Buildifier) {
+	if buildifierRegistered {
+		panic("Only one call to RegisterBuildifier is allowed.")
+	}
+	buildifier = b
+	buildifierRegistered = true
+}
 
 // rewrite parses the BUILD file for the given file, transforms the AST,
 // and write the changes back in the file (or on stdout).
@@ -986,7 +1012,7 @@ func rewrite(opts *Options, commandsForFile commandsForFile) *rewriteResult {
 		return &rewriteResult{file: name, errs: errs, records: records}
 	}
 	f = RemoveEmptyPackage(f)
-	ndata, err := runBuildifier(opts, f)
+	ndata, err := buildifier.Buildify(opts, f)
 	if err != nil {
 		return &rewriteResult{file: name, errs: []error{fmt.Errorf("running buildifier: %v", err)}, records: records}
 	}
@@ -1015,39 +1041,6 @@ func rewrite(opts *Options, commandsForFile commandsForFile) *rewriteResult {
 // e.g. "checking out for write" from a locking source control repo.
 var EditFile = func(fi os.FileInfo, name string) error {
 	return nil
-}
-
-// runBuildifier formats the build file f.
-// Runs opts.Buildifier if it's non-empty, otherwise uses built-in formatter.
-// opts.Buildifier is useful to force consistency with other tools that call Buildifier.
-func runBuildifier(opts *Options, f *build.File) ([]byte, error) {
-	if opts.Buildifier == "" {
-		// Current AST may be not entirely correct, e.g. it may contain Ident which
-		// value is a chunk of code, like "f(x)". The AST should be printed and
-		// re-read to parse such expressions correctly.
-		contents := build.Format(f)
-		newF, err := build.ParseBuild(f.Path, []byte(contents))
-		if err != nil {
-			return nil, err
-		}
-		return build.Format(newF), nil
-	}
-
-	cmd := exec.Command(opts.Buildifier, "--type=build")
-	data := build.Format(f)
-	cmd.Stdin = bytes.NewBuffer(data)
-	stdout := bytes.NewBuffer(nil)
-	stderr := bytes.NewBuffer(nil)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	err := cmd.Run()
-	if stderr.Len() > 0 {
-		return nil, fmt.Errorf("%s", stderr.Bytes())
-	}
-	if err != nil {
-		return nil, err
-	}
-	return stdout.Bytes(), nil
 }
 
 // Given a target, whose package may contain a trailing "/...", returns all
@@ -1103,8 +1096,11 @@ func findBuildFiles(rootDir string) []string {
 
 // appendCommands adds the given commands to be applied to each of the given targets
 // via the commandMap.
-func appendCommands(opts *Options, commandMap map[string][]commandsForTarget, args []string) {
-	commands, targets := parseCommands(opts, args)
+func appendCommands(opts *Options, commandMap map[string][]commandsForTarget, args []string) error {
+	commands, targets, err := parseCommands(opts, args)
+	if err != nil {
+		return err
+	}
 	for _, target := range targets {
 		for _, buildFileName := range BuildFileNames {
 			if strings.HasSuffix(target, filepath.FromSlash("/"+buildFileName)) {
@@ -1124,9 +1120,10 @@ func appendCommands(opts *Options, commandMap map[string][]commandsForTarget, ar
 			commandMap[file] = append(commandMap[file], commandsForTarget{target, commands})
 		}
 	}
+	return nil
 }
 
-func appendCommandsFromFiles(opts *Options, commandsByFile map[string][]commandsForTarget) {
+func appendCommandsFromFiles(opts *Options, commandsByFile map[string][]commandsForTarget, labels []string) error {
 	for _, fileName := range opts.CommandsFiles {
 		var reader io.Reader
 		if fileName == stdinPackageName {
@@ -1136,11 +1133,14 @@ func appendCommandsFromFiles(opts *Options, commandsByFile map[string][]commands
 			reader = rc
 			defer rc.Close()
 		}
-		appendCommandsFromReader(opts, reader, commandsByFile)
+		if err := appendCommandsFromReader(opts, reader, commandsByFile, labels); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func appendCommandsFromReader(opts *Options, reader io.Reader, commandsByFile map[string][]commandsForTarget) {
+func appendCommandsFromReader(opts *Options, reader io.Reader, commandsByFile map[string][]commandsForTarget, labels []string) error {
 	r := bufio.NewReader(reader)
 	atEOF := false
 	for !atEOF {
@@ -1150,16 +1150,25 @@ func appendCommandsFromReader(opts *Options, reader io.Reader, commandsByFile ma
 			err = nil
 		}
 		if err != nil {
-			fmt.Fprintf(opts.ErrWriter, "Error while reading commands file: %v", err)
-			return
+			return fmt.Errorf("error while reading commands file: %v", err)
 		}
 		line = strings.TrimSpace(line)
 		if line == "" || line[0] == '#' {
 			continue
 		}
 		args := strings.Split(line, "|")
-		appendCommands(opts, commandsByFile, args)
+		if len(args) > 1 && args[1] == "*" {
+			cmd := append([]string{args[0]}, labels...)
+			if err := appendCommands(opts, commandsByFile, cmd); err != nil {
+				return err
+			}
+		} else {
+			if err := appendCommands(opts, commandsByFile, args); err != nil {
+				return err
+			}
+		}
 	}
+	return nil
 }
 
 func printRecord(writer io.Writer, record *apipb.Output_Record) {
@@ -1206,12 +1215,18 @@ func Buildozer(opts *Options, args []string) int {
 	}
 	commandsByFile := make(map[string][]commandsForTarget)
 	if len(opts.CommandsFiles) > 0 {
-		appendCommandsFromFiles(opts, commandsByFile)
+		if err := appendCommandsFromFiles(opts, commandsByFile, args); err != nil {
+			fmt.Fprintf(opts.ErrWriter, "error: %s\n", err)
+			return 1
+		}
 	} else {
 		if len(args) == 0 {
 			Usage()
 		}
-		appendCommands(opts, commandsByFile, args)
+		if err := appendCommands(opts, commandsByFile, args); err != nil {
+			fmt.Fprintf(opts.ErrWriter, "error: %s\n", err)
+			return 1
+		}
 	}
 
 	numFiles := len(commandsByFile)
