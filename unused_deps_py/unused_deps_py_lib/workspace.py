@@ -1,11 +1,7 @@
 import logging
 import os
 
-
-def remove_prefix(text, prefix):
-    if text.startswith(prefix):
-        return text[len(prefix):]
-    return text  # or whatever
+from .string_util import remove_prefix
 
 
 def interpret_label(label: str):

@@ -7,7 +7,7 @@ from xml.etree import ElementTree
 
 from . import command, aspect
 from . workspace import interpret_label_for_workspace_location
-from . import strip_prefix_path, get_real_path
+from .path_util import strip_prefix_path, get_real_path
 from deps_proto import deps_pb2
 
 
