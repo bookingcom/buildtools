@@ -182,7 +182,7 @@ class Processor:
 
     def get_maven_repos(self) -> List[str]:
         fetch = "coursier_fetch"
-        repos = self.execute_bazel_command('query', '--output=xml', f'"kind({fetch}, //external:all)"')
+        repos = self.execute_bazel_command('query', '--output=xml', f'"kind({fetch}, //external:*)"')
         parsed = ElementTree.fromstring(repos)
         out = list()
         for rule in parsed.iter('rule'):
