@@ -47,7 +47,7 @@ Note these may be used at run time; see documentation for more information.
     parser.add_argument(
         '--version',
         action='version',
-        version='%(prog)s 0.0.4'
+        version='%(prog)s 0.0.5'
     )
 
     parser.add_argument(
