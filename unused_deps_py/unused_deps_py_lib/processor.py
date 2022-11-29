@@ -232,4 +232,5 @@ class Processor:
         dependencies = deps_pb2.Dependencies()
         dependencies.ParseFromString(body)
         for dependency in dependencies.dependency:
-            yield dependency.path
+            if dependency.kind == deps_pb2.Dependency.Kind.EXPLICIT:
+                yield dependency.path
